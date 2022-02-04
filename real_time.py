@@ -6,7 +6,7 @@ from time import sleep
 
 def play_video():
     cwd = getcwd()
-    vid_path = join(cwd,'video.mp4')
+    vid_path = join(cwd,'video_funciona.mp4')
     cap = cv2.VideoCapture(vid_path)
     
     if (cap.isOpened()== False): 

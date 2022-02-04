@@ -5,6 +5,7 @@ from os import listdir, getcwd, remove
 from os.path import join
 from time import sleep
 
+#analizámos el vídeo para identificar los frames usando OpenCV
 def get_frames():
     cwd = getcwd()
     vid_path = join(cwd,'video.mp4')
@@ -39,12 +40,15 @@ def get_frames():
     images = images[:-1]
 
     return images
-
+#procesamos el vídeo para opbtener los frames.
 cwd = getcwd()
 images = get_frames()
 print(images)
+#testeamos una imagen
 img = cv2.imread(join(cwd, 'frames', images[7]))
 plt.imshow(img)
+
+#definimos una función para recortar la ficha de dominó de la imagen.
 def find_dominoes(image):
     
     image_copy = image.copy()
@@ -74,15 +78,19 @@ def find_dominoes(image):
     out = np.zeros_like(image_copy) # Extract out the object and place into output image
     out[mask == 255] = image_copy[mask == 255]
     
-    # Now crop
+#recortamos
     (y, x) = np.where(mask == 255)[0:2]
     (topy, topx) = (np.min(y), np.min(x))
     (bottomy, bottomx) = (np.max(y), np.max(x))
     out = image_copy[topy:bottomy+1, topx:bottomx+1]
     return out
+
+#testeamos
 cropped_img = find_dominoes(img)
 plt.imshow(cropped_img)
 
+#definimos una función para contar los puntos en la ficha. 
+#Para ello utilizaremos el método de detección de BLOB y ajustaremos los parámetros mediante prueba y error.
 def get_shot_blob(image,
                   filter_by_area = True,
                   A = (1,150),
@@ -95,44 +103,46 @@ def get_shot_blob(image,
                   filter_by_inertia = True,
                   min_inertia_ratio = 0.15 # 0.66 
                  ):
-    ## takes RGB image , returns centers of shots  by simple blob detector method
+    
+#toma una imagen RGB, devuelve los centros de las tomas mediante un simple método de detección de manchas
     image_copy = image.copy()
     img_Gray = cv2.cvtColor(image_copy, cv2.COLOR_RGB2GRAY)
-    # Setup SimpleBlobDetector parameters
+    
+#Configurar los parámetros de SimpleBlobDetector
     params = cv2.SimpleBlobDetector_Params()
     
-    # Change thresholds
+# Cambiar umbrales
     params.minThreshold = 0
     params.maxThreshold = 500
 
-    # Filter by Area.
+# Filtramos por áreas
     if filter_by_area:
         params.filterByArea = filter_by_area    
         params.minArea = A[0]
         params.maxArea = A[1]
-    # Filter by Color.
+# Filtramos por color.
     if filter_by_color:
         params.filterByColor = filter_by_color
         params.blobColor = 0
 
-    # Filter by Circularity
+# Filtrar por forma circular
     if filter_by_circularity:
         params.filterByCircularity = filter_by_circularity
         params.minCircularity = min_circularity 
 
-    # Filter by Convexity
+# Filtrar por convexidad
     if filter_by_covexity:
         params.filterByConvexity = filter_by_covexity
         params.minConvexity = min_convexity
 
     params.minDistBetweenBlobs = min_dist_between_blobs
 
-    # Filter by Inertia
+# Filtrar por Inercia
     if filter_by_inertia:
         params.filterByInertia = filter_by_inertia
         params.minInertiaRatio = min_inertia_ratio
     
-    # Create a detector with the parameters
+# Creamos un detector con los parámetros
     ver = (cv2.__version__).split('.')
     if int(ver[0]) < 3:
         detector = cv2.SimpleBlobDetector(params)
@@ -140,17 +150,19 @@ def get_shot_blob(image,
         detector = cv2.SimpleBlobDetector_create(params)
 
     im_with_keypoints = detector.detect(img_Gray)
-#     print(len(im_with_keypoints))
+
     
     centers = []
     for key in im_with_keypoints:
         centers.append((int(key.pt[0]), int(key.pt[1])))
     
-    # Highlight dots.
+# Resaltar puntos.
     for center in centers:
         output_image = cv2.circle(image_copy, center, 10,(0,255,0), -1)
         
     return output_image, centers
+
+#Testeamos
 output_image, centers = get_shot_blob(cropped_img,
                           filter_by_area = True,
                           A = (1,500),
@@ -165,45 +177,50 @@ output_image, centers = get_shot_blob(cropped_img,
                          )
 plt.imshow(output_image)
 
+#definir una función para encontrar la pendiente de la línea
 def get_domino_slope(image):
     
     image_copy = image.copy()
     dst = cv2.Canny(image_copy, 0, 200, None, 3)
     linesP = cv2.HoughLinesP(dst, 1, np.pi / 180, 50, None, 50, 100)
 
-    # Calculate lengthes of detected lines
+# Calcular longitudes de líneas detectadas
     lengthes = []
     for x1,y1,x2,y2 in linesP[:, 0]:
         lengthes.append(((x1-x2)**2+(y1-y2)**2)**0.5)
     
-    # Extract coordinates of the longest line
+# Extrae las coordenadas de la línea más larga
     x1,y1,x2,y2 = linesP[lengthes == max(lengthes),0][0]
     
-    # Draw the longest line
+# Dibujar la línea más larga
     image_copy = image.copy()
     out = cv2.line(image_copy,(x1,y1),(x2,y2),(0,255,0),2)
     
-    # Find the center of the longest line
+# Encuentra el centro de la línea más larga.
     x_center = int((x1+x2)/2)
     y_center = int((y1+y2)/2)
     prep_point = (x_center, y_center)
     
-    # Calculate the slope of the prependicular to the longest line
+# Calcular la pendiente de la recta prependicular a la recta más larga
     slope = (y1-y2)/(x1-x2)
     slope_prep = -1/slope
     
-    # Calculate another point on the prependicular line
+# Calcular otro punto en la recta perpendicular
     x_prep = 100
     y_prep = int(y_center + (slope_prep*(x_prep - x_center)))
     
-    # Draw the prependicular line
+# Dibujar la linea perpendicular
     out = cv2.line(image_copy, (x_prep,y_prep), (x_center,y_center), (0,255,0), 2)
     out = cv2.circle(image_copy, (x_center,y_center), 10,(0,0,255), -1)
     out = cv2.circle(image_copy, (x_prep,y_prep), 10,(0,0,255), -1)
         
     return out, slope_prep, prep_point
+#Testeamos
 lined_image, slope_prep, prep_point = get_domino_slope(cropped_img)
 plt.imshow(lined_image)
+
+#definimos una funcion para contar los puntos a ambos lados de la linea perpendicular
+
 def count_dots(slope, point, centers):
     upper = 0
     lower = 0
@@ -222,6 +239,8 @@ def count_dots(slope, point, centers):
     print(f'Number of dots: ({upper}, {lower})')
     
 count_dots(slope_prep, prep_point, centers)
+
+#recorremos la imagenes y contamos lo puntos
 num_images = len(images)
 
 fig, axes = plt.subplots(3, num_images, figsize = [20, 15])
