@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
@@ -8,7 +9,7 @@ from time import sleep
 #analizámos el vídeo para identificar los frames usando OpenCV
 def get_frames():
     cwd = getcwd()
-    vid_path = join(cwd,'video.mp4')
+    vid_path = join(cwd,'video_1.mp4')
     cap = cv2.VideoCapture(vid_path)
 
     i=0

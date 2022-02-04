@@ -1,12 +1,14 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 import cv2
 from os import listdir, getcwd, remove
 from os.path import join
 from time import sleep
 
+#reproducimos el video y modificamos características con OpenCV
 def play_video():
     cwd = getcwd()
-    vid_path = join(cwd,'video_funciona.mp4')
+    vid_path = join(cwd,'video_1.mp4')
     cap = cv2.VideoCapture(vid_path)
     
     if (cap.isOpened()== False): 
@@ -15,7 +17,6 @@ def play_video():
     i=0
     while(cap.isOpened()):
         ret, frame = cap.read()
-        # sleep(0.125)
         if ret == False:
             break
         cropped = frame[266:582]
@@ -31,10 +32,10 @@ def play_video():
                                             min_convexity = 0.9, 
                                             min_dist_between_blobs = 0,
                                             filter_by_inertia = False,
-                                            min_inertia_ratio = 0.15 # 0.66 
+                                            min_inertia_ratio = 0.15 
                                             )
         img_with_slope, slope_prep, prep_point = get_domino_slope(img_with_blobs)
-        if slope_prep == 100: ## image with hand
+        if slope_prep == 100:
             img_with_txt = add_text(resized, str(0))
         else:
             upper, lower = count_dots(slope_prep, prep_point, centers)
@@ -48,7 +49,7 @@ def play_video():
                                             min_convexity = 0.9, 
                                             min_dist_between_blobs = 0,
                                             filter_by_inertia = False,
-                                            min_inertia_ratio = 0.15 # 0.66 
+                                            min_inertia_ratio = 0.15 
                                             )
             img_with_txt = add_text(img_with_blobs, f'({str(upper)}, {str(lower)})')
         
@@ -60,7 +61,7 @@ def play_video():
     cap.release()
     cv2.destroyAllWindows()
 
-
+#definimos el contador
 def add_text(img, text):
     font                   = cv2.FONT_HERSHEY_SIMPLEX
     bottomLeftCornerOfText = (20,40)
@@ -76,6 +77,7 @@ def add_text(img, text):
                                lineType)
     return img_with_txt
 
+#definimos la busqueda de las piezas
 def find_dominoes(image):
     
     image_copy = image.copy()
@@ -99,19 +101,23 @@ def find_dominoes(image):
     mask = cv2.erode(opened_3, kernel, iterations = 20)
 
     contours, _ = cv2.findContours(opened_3,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-    
-    mask = np.zeros_like(image_copy) # Create mask where white is what we want, black otherwise
-    cv2.drawContours(mask, contours, 0, 255, -1) # Draw filled contour in mask
-    out = np.zeros_like(image_copy) # Extract out the object and place into output image
+#Creamos la máscara donde el blanco es lo que queremos
+    mask = np.zeros_like(image_copy)
+#Rellenamos el contorno de la máscara
+    cv2.drawContours(mask, contours, 0, 255, -1) 
+#Extraemos el objeto y lo mostramos por pantalla
+    out = np.zeros_like(image_copy)
     out[mask == 255] = image_copy[mask == 255]
     
-    # Now crop
+#Recortamos
     (y, x) = np.where(mask == 255)[0:2]
     (topy, topx) = (np.min(y), np.min(x))
     (bottomy, bottomx) = (np.max(y), np.max(x))
     out = image_copy[topy:bottomy+1, topx:bottomx+1]
     return out
 
+#definimos una función para contar los puntos en la ficha. 
+#Para ello utilizaremos el método de detección de BLOB y ajustaremos los parámetros mediante prueba y error.
 def get_shot_blob(image,
                   filter_by_area = True,
                   A = (1,150),
@@ -124,44 +130,44 @@ def get_shot_blob(image,
                   filter_by_inertia = True,
                   min_inertia_ratio = 0.15 # 0.66 
                  ):
-    ## takes RGB image , returns centers of shots  by simple blob detector method
+#toma una imagen RGB, devuelve los centros de las tomas mediante un simple método de detección de manchas
     image_copy = image.copy()
     img_Gray = cv2.cvtColor(image_copy, cv2.COLOR_RGB2GRAY)
     # Setup SimpleBlobDetector parameters
     params = cv2.SimpleBlobDetector_Params()
     
-    # Change thresholds
+# Cambiar umbrales
     params.minThreshold = 0
     params.maxThreshold = 500
-
-    # Filter by Area.
+    
+# Filtramos por áreas
     if filter_by_area:
         params.filterByArea = filter_by_area    
         params.minArea = A[0]
         params.maxArea = A[1]
-    # Filter by Color.
+# Filtramos por color.
     if filter_by_color:
         params.filterByColor = filter_by_color
         params.blobColor = 0
 
-    # Filter by Circularity
+# Filtrar por forma circular
     if filter_by_circularity:
         params.filterByCircularity = filter_by_circularity
         params.minCircularity = min_circularity 
 
-    # Filter by Convexity
+# Filtrar por convexidad
     if filter_by_covexity:
         params.filterByConvexity = filter_by_covexity
         params.minConvexity = min_convexity
 
     params.minDistBetweenBlobs = min_dist_between_blobs
 
-    # Filter by Inertia
+# Filtrar por Inercia
     if filter_by_inertia:
         params.filterByInertia = filter_by_inertia
         params.minInertiaRatio = min_inertia_ratio
     
-    # Create a detector with the parameters
+# Creamos un detector con los parámetros
     ver = (cv2.__version__).split('.')
     if int(ver[0]) < 3:
         detector = cv2.SimpleBlobDetector(params)
@@ -174,7 +180,7 @@ def get_shot_blob(image,
     for key in im_with_keypoints:
         centers.append((int(key.pt[0]), int(key.pt[1])))
     
-    # Highlight dots.
+# Resaltar puntos.
     for center in centers:
         output_image = cv2.circle(image_copy, center, 10,(0,255,0), -1)
 
@@ -182,7 +188,7 @@ def get_shot_blob(image,
         return output_image, centers
     else:
         return image, centers
-
+#definir una función para encontrar la pendiente de la línea
 def get_domino_slope(image):
     
     image_copy = image.copy()
@@ -192,40 +198,40 @@ def get_domino_slope(image):
     if linesP is None:
         return image, 100, (0,0)
 
-    # Calculate lengthes of detected lines
+# Calcular longitudes de líneas detectadas
     lengthes = []
     for x1,y1,x2,y2 in linesP[:, 0]:
         lengthes.append(((x1-x2)**2+(y1-y2)**2)**0.5)
     
-    # Extract coordinates of the longest line
+# Extrae las coordenadas de la línea más larga
     x1,y1,x2,y2 = linesP[lengthes == max(lengthes),0][0]
     
-    # Draw the longest line
+# Dibujar la línea más larga
     image_copy = image.copy()
     out = cv2.line(image_copy,(x1,y1),(x2,y2),(0,255,0),2)
     
-    # Find the center of the longest line
+# Encuentra el centro de la línea más larga.
     x_center = int((x1+x2)/2)
     y_center = int((y1+y2)/2)
     prep_point = (x_center, y_center)
-    
-    # Calculate the slope of the prependicular to the longest line
+# Calcular la pendiente de la recta prependicular a la recta más larga
     if (y1-y2) == 0 or (x1-x2) == 0:
         return image, 100, (0,0)
     slope = (y1-y2)/(x1-x2)
     slope_prep = -1/slope
     
-    # Calculate another point on the prependicular line
+# Calcular otro punto en la recta perpendicular
     x_prep = 100
     y_prep = int(y_center + (slope_prep*(x_prep - x_center)))
     
-    # Draw the prependicular line
+# Dibujar la linea perpendicular
     out = cv2.line(image_copy, (x_prep,y_prep), (x_center,y_center), (0,255,0), 2)
     out = cv2.circle(image_copy, (x_center,y_center), 10,(0,0,255), -1)
     out = cv2.circle(image_copy, (x_prep,y_prep), 10,(0,0,255), -1)
         
     return out, slope_prep, prep_point
 
+#definimos una funcion para contar los puntos a ambos lados de la linea perpendicular
 def count_dots(slope, point, centers):
     upper = 0
     lower = 0
