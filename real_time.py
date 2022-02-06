@@ -12,7 +12,7 @@ def play_video():
     cap = cv2.VideoCapture(vid_path)
     
     if (cap.isOpened()== False): 
-        print("Error opening video  file")
+        print("Error al abrir el vídeo")
     
     i=0
     while(cap.isOpened()):
@@ -53,7 +53,7 @@ def play_video():
                                             )
             img_with_txt = add_text(img_with_blobs, f'({str(upper)}, {str(lower)})')
         
-        cv2.imshow('vid',img_with_txt)
+        cv2.imshow('video',img_with_txt)
         if cv2.waitKey(25) & 0xFF == ord('q'):
             break
         i+=1
@@ -133,7 +133,6 @@ def get_shot_blob(image,
 #toma una imagen RGB, devuelve los centros de las tomas mediante un simple método de detección de manchas
     image_copy = image.copy()
     img_Gray = cv2.cvtColor(image_copy, cv2.COLOR_RGB2GRAY)
-    # Setup SimpleBlobDetector parameters
     params = cv2.SimpleBlobDetector_Params()
     
 # Cambiar umbrales
@@ -247,7 +246,7 @@ def count_dots(slope, point, centers):
             lower += 1
         else:
             upper += 1
-    print(f'Number of dots: ({upper}, {lower})')
+    print(f'Número de puntos: ({upper}, {lower})')
     return upper, lower
 
 if __name__ == '__main__':

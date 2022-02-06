@@ -74,9 +74,12 @@ def find_dominoes(image):
 
     contours, _ = cv2.findContours(opened_3,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
     
-    mask = np.zeros_like(image_copy) # Create mask where white is what we want, black otherwise
-    cv2.drawContours(mask, contours, 0, 255, -1) # Draw filled contour in mask
-    out = np.zeros_like(image_copy) # Extract out the object and place into output image
+#Creamos la máscara donde el blanco es lo que queremos  
+    mask = np.zeros_like(image_copy)
+#Rellenamos el contorno de la máscara
+    cv2.drawContours(mask, contours, 0, 255, -1)
+#Extraemos el objeto y lo mostramos por pantalla
+    out = np.zeros_like(image_copy) 
     out[mask == 255] = image_copy[mask == 255]
     
 #recortamos
@@ -237,7 +240,7 @@ def count_dots(slope, point, centers):
             lower += 1
         else:
             upper += 1
-    print(f'Number of dots: ({upper}, {lower})')
+    print(f'Número de puntos: ({upper}, {lower})')
     
 count_dots(slope_prep, prep_point, centers)
 
